@@ -92,7 +92,7 @@ ggplot(data = book_chapter_rating, aes(x = book, y = mean_rating, fill = book, c
 #######################################
 #                                     #
 #         2020-08-18                  #
-#         Extinct plants             #                
+#         Extinct plants              #                
 #                                     #
 #######################################
 #load this week's data
@@ -133,4 +133,80 @@ mapCountryData(ext_plt_by_c_map, nameColumnToPlot="plt_n", mapTitle="Extinct Pla
 
 #learn from below
 #https://rpubs.com/timwinke/worldmap
+
+
+#######################################
+#                                     #
+#         2020-08-25                  #
+#         chopped                     #                
+#                                     #
+#######################################
+#load this week's data
+tuesdata = tt_load('2020-08-25')
+
+#make tables
+chop = tuesdata$chopped
+
+#eda
+chop %>% group_by(series_episode) %>% summarise(n = n()) %>% arrange(desc(n)) #526, 527 episodes have 2 rows? doesn't make sense. fix it
+chop = chop %>% arrange(season, season_episode)%>% mutate(series_episode = row_number())
+
+## of judges appeared in the show
+judge = c(chop$judge1, chop$judge2, chop$judge3)
+judge = data.frame(judge)
+
+judge$judge = as.character(judge$judge)
+judge_times = judge %>% group_by(judge) %>% count()
+
+
+##histogram
+theme_set(theme(legend.position = "top", plot.title.position = 'plot', plot.title = element_text(hjust = 0.5), axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)), axis.title.y = element_text(angle = 90, margin = margin(t = 0, r = 10, b = 0, l = 0))))
+
+ggplot(data = judge_times, aes(x = n)) +
+  geom_histogram(color = '#00AFBB', fill = '#00AFBB', alpha = 0.3) +
+  stat_bin(geom="text", colour="black", size=3.5,
+           aes(label = ifelse(..count.. > 0, ..count.., "")), position=position_stack(vjust=1)) +
+  scale_x_continuous(breaks = seq(1, max(judge_times$n), 20)) +
+  labs(x = 'Appearances as Judge', y = 'Count of Judges') 
+  
+
+
+#######################################
+#                                     #
+#         2020-09-01                  #
+#         global crop yields          #                
+#                                     #
+#######################################
+#load this week's data
+data = tt_load('2020-09-01')
+
+#make tables
+yield = data$key_crop_yields
+fertilizer = data$cereal_crop_yield_vs_fertilizer_application
+tractor = data$cereal_yields_vs_tractor_inputs_in_agriculture
+land_use = data$land_use_vs_yield_change_in_cereal_production
+arable_land = data$arable_land_pin
+
+#format tables
+yield = yield %>%
+# rename(wheat  = `Wheat (tonnes per hectare)`, rice = `Rice (tonnes per hectare)`, maize = `Maize (tonnes per hectare)`, soybeans = `Soybeans (tonnes per hectare)`, potatoes = `Potatoes (tonnes per hectare)`, beans = `Beans (tonnes per hectare)`, peas = `Peas (tonnes per hectare)`, cassava = `Cassava (tonnes per hectare)`, barley = `Barley (tonnes per hectare)`, cocoa = `Cocoa beans (tonnes per hectare)`, bananas = `Bananas (tonnes per hectare)`) %>% 
+mutate(total = rowSums(bind_cols(yield[, c(4:14)]), na.rm = T))
+
+tractor = tractor %>% rename(tractor_per_land = `Tractors per 100 sq km arable land`, total_population =`Total population (Gapminder)`)
+tractor$Year = as.numeric(tractor$Year)
+
+yield_tractor_pop = yield %>% select(Entity, Year, total) %>% left_join(., tractor %>% select(Entity, Year, tractor_per_land, total_population), by = c('Entity', 'Year'))
+
+
+#eda
+yield %>% distinct(Entity) #249 countries
+
+
+#total yields by year
+theme_set(theme(legend.position = "top", plot.title.position = 'plot', plot.title = element_text(hjust = 0.5), axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)), axis.title.y = element_text(angle = 90, margin = margin(t = 0, r = 10, b = 0, l = 0))))
+
+ggplot(data = yield_tractor_pop %>% filter(Entity == 'Afghanistan'), aes(x = Year, y = total, group = Entity)) +
+  geom_line(color = '#00AFBB') +
+  scale_x_continuous(breaks = seq(min(yield_tractor_pop$Year), max(yield_tractor_pop$Year), 5))
+  labs(x = 'Appearances as Judge', y = 'Count of Judges')
 
